@@ -5,8 +5,7 @@
 // repo instead of workspace-data/settings/settings.json.
 //
 // settings.json holds:
-//   - company info
-//   - the UPI ID used for "Scan & Pay" on generated PDFs
+//   - company info & bank details
 //   - the list of service names offered
 //   - the checklist template (categories + default items)
 //   - the list of project statuses
@@ -14,16 +13,11 @@
 // NOTE: document numbering counters now live in counters/counters.json
 // (see documentNumbering.js / githubStorage.js), not in settings.
 //
-// NOTE: Logo, stamp, and the Scan & Pay QR code are NOT stored here.
-// They are fixed application assets at public/assets/logo.png,
-// public/assets/stamp.png, and public/assets/qr.png (see
-// src/lib/brandAssets.js) - those are part of the application itself,
-// not workspace data, so they still ship as regular files in the
-// repo/deployment. To change them, replace the file and redeploy.
-//
-// NOTE: There is no bank details anywhere in this app (v2.1). Bank
-// details were removed entirely and replaced by a single UPI ID +
-// QR code "Scan & Pay" block on every generated PDF.
+// NOTE: Logo and stamp are NOT stored here. They are fixed
+// application assets at public/assets/logo.png and
+// public/assets/stamp.png (see src/lib/brandAssets.js) - those are
+// part of the application itself, not workspace data, so they still
+// ship as regular files in the repo/deployment.
 
 const githubStorage = require("./githubStorage");
 
@@ -31,15 +25,18 @@ function defaultSettings() {
   return {
     company: {
       name: "GreyNod Digital",
-      email: "greynoddigital@gmail.com",
-      phone: "+91 98465 14798",
-      address: "Kozhikode, Kerala, India",
-      website: "https://greynoddigital.github.io/",
+      email: "",
+      phone: "",
+      address: "",
+      website: "",
     },
-    // UPI ID shown (along with the qr.png asset) in the "Scan & Pay"
-    // block on every generated PDF. Editable from Settings ->
-    // Application; this default is only used on a fresh install.
-    upiId: "vxnuprasad-3@okicici",
+    bankDetails: {
+      accountName: "",
+      accountNumber: "",
+      ifscCode: "",
+      bankName: "",
+      upiId: "",
+    },
     // Service names only. Prices are entered manually per project.
     services: [
       "E-commerce Website",
@@ -88,49 +85,15 @@ function defaultSettings() {
   };
 }
 
-// Older settings.json files may still have a "branding" key (v2.0,
-// with logoPath/stampPath/signaturePath) and/or a "bankDetails" key
-// (pre-v2.1). Neither is part of the current schema - bank details
-// were removed entirely in v2.1 and replaced by a single top-level
-// "upiId" field. This strips those legacy keys out the first time an
-// older file is read, carrying any existing UPI ID forward so it
-// isn't lost in the migration.
-function migrateLegacyFields(settings) {
-  if (!settings) return settings;
-
-  let result = settings;
-  let changed = false;
-
-  if (Object.prototype.hasOwnProperty.call(result, "branding")) {
-    const { branding, ...rest } = result;
-    result = rest;
-    changed = true;
+// Older settings.json files (v2.0) may still have a "branding" key
+// with logoPath/stampPath/signaturePath. That's no longer part of
+// the schema, so it's stripped out the first time the file is read.
+function stripLegacyFields(settings) {
+  if (settings && Object.prototype.hasOwnProperty.call(settings, "branding")) {
+    const { branding, ...rest } = settings;
+    return rest;
   }
-
-  if (Object.prototype.hasOwnProperty.call(result, "bankDetails")) {
-    const { bankDetails, ...rest } = result;
-    const carriedUpi = (result.upiId || (bankDetails && bankDetails.upiId) || "").trim();
-    result = { ...rest, upiId: carriedUpi || defaultSettings().upiId };
-    changed = true;
-  }
-
-  return changed ? result : settings;
-}
-
-// Fills in any missing company/upiId keys using the defaults, without
-// touching values that are already present. This is what guarantees
-// Company Settings never "reload as blank": even if a settings.json
-// out in GitHub is missing a field (partial save, older version,
-// manual edit, etc.), reading it always returns a complete object.
-function hydrateSettings(settings) {
-  const defaults = defaultSettings();
-  const hydrated = {
-    ...settings,
-    company: { ...defaults.company, ...(settings.company || {}) },
-    upiId: settings.upiId || defaults.upiId,
-  };
-  const changed = JSON.stringify(hydrated) !== JSON.stringify(settings);
-  return { hydrated, changed };
+  return settings;
 }
 
 async function readSettings() {
@@ -141,12 +104,11 @@ async function readSettings() {
     return fresh;
   }
 
-  const migrated = migrateLegacyFields(raw);
-  const { hydrated, changed: hydratedChanged } = hydrateSettings(migrated);
-  if (migrated !== raw || hydratedChanged) {
-    await githubStorage.saveSettings(hydrated);
+  const cleaned = stripLegacyFields(raw);
+  if (cleaned !== raw) {
+    await githubStorage.saveSettings(cleaned);
   }
-  return hydrated;
+  return cleaned;
 }
 
 async function writeSettings(settings) {

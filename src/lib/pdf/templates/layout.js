@@ -1,19 +1,14 @@
 // src/lib/pdf/templates/layout.js
 //
 // Wraps a document's body HTML with a shared <head> (styles), a
-// header (company name, address, contact info + logo), and a footer
-// (contact info + stamp + "Scan & Pay" block). Every PDF template
-// (quotation, checklist, invoice) uses this function so all documents
-// look consistent and always carry the same company/payment info.
+// header (company name + logo), and a footer (contact info + stamp).
+// Every PDF template (quotation, checklist, invoice) uses this
+// function so all documents look consistent.
 //
-// There is no signature and no bank details anywhere in this app
-// (v2.1). Logo, stamp, and the Scan & Pay QR code are fixed
-// application assets - see src/lib/brandAssets.js. The UPI ID shown
-// alongside the QR code comes from Settings (settings.upiId) and is
-// always read fresh, so changing it in Settings updates every PDF
-// generated afterwards.
+// There is no signature anywhere in this app (v2.0.1). Logo and
+// stamp are fixed application assets - see src/lib/brandAssets.js.
 
-const { getLogoDataUri, getStampDataUri, getQrDataUri } = require("../../brandAssets");
+const { getLogoDataUri, getStampDataUri } = require("../../brandAssets");
 
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (ch) => ({
@@ -148,70 +143,12 @@ const SHARED_STYLES = `
     letter-spacing: 1px;
     margin-bottom: 4px;
   }
-  a { color: inherit; text-decoration: underline; }
-  .scan-and-pay {
-    margin-top: 20px;
-    padding-top: 14px;
-    border-top: 1px dashed #999;
-    text-align: center;
-  }
-  .scan-and-pay .title {
-    font-size: 12px;
-    font-weight: bold;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    margin-bottom: 10px;
-  }
-  .scan-and-pay .qr-img {
-    display: block;
-    margin: 0 auto 8px auto;
-    width: 110px;
-    height: 110px;
-  }
-  .scan-and-pay .upi-label {
-    font-size: 10px;
-    color: #555;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  .scan-and-pay .upi-id {
-    font-size: 12px;
-    font-weight: bold;
-  }
 `;
-
-function emailLink(email) {
-  if (!email) return "";
-  const safe = escapeHtml(email);
-  return `<a href="mailto:${safe}">${safe}</a>`;
-}
-
-function websiteLink(website) {
-  if (!website) return "";
-  const safe = escapeHtml(website);
-  return `<a href="${safe}">${safe}</a>`;
-}
 
 function wrapDocument({ title, settings, bodyHtml, docNumber, docDate, footerNote }) {
   const company = settings.company || {};
-  const upiId = settings.upiId || "";
   const logo = getLogoDataUri();
   const stamp = getStampDataUri();
-  const qr = getQrDataUri();
-
-  const scanAndPay =
-    qr || upiId
-      ? `
-  <div class="scan-and-pay">
-    <div class="title">Scan &amp; Pay</div>
-    ${qr ? `<img class="qr-img" src="${qr}" />` : ""}
-    ${
-      upiId
-        ? `<div class="upi-label">UPI ID</div><div class="upi-id">${escapeHtml(upiId)}</div>`
-        : ""
-    }
-  </div>`
-      : "";
 
   return `
 <!DOCTYPE html>
@@ -229,7 +166,7 @@ function wrapDocument({ title, settings, bodyHtml, docNumber, docDate, footerNot
         <div class="company-name">${escapeHtml(company.name || "GreyNod Digital")}</div>
         <div class="company-meta">
           ${escapeHtml(company.address || "")}<br/>
-          ${emailLink(company.email)}${company.email && company.phone ? " · " : ""}${escapeHtml(company.phone || "")}
+          ${escapeHtml(company.email || "")} ${company.phone ? " · " + escapeHtml(company.phone) : ""}
         </div>
       </div>
     </div>
@@ -246,12 +183,11 @@ function wrapDocument({ title, settings, bodyHtml, docNumber, docDate, footerNot
     ${footerNote ? `<div class="thank-you-note">${escapeHtml(footerNote)}</div>` : ""}
     <div class="footer-row">
       <div class="contact-info">
-        ${company.website ? websiteLink(company.website) + "<br/>" : ""}
-        ${emailLink(company.email)}${company.email && company.phone ? " · " : ""}${escapeHtml(company.phone || "")}
+        ${company.website ? escapeHtml(company.website) + "<br/>" : ""}
+        ${company.email ? escapeHtml(company.email) : ""}${company.email && company.phone ? " · " : ""}${company.phone ? escapeHtml(company.phone) : ""}
       </div>
       ${stamp ? `<img class="stamp-img" src="${stamp}" />` : ""}
     </div>
-    ${scanAndPay}
   </div>
 </body>
 </html>`;
