@@ -42,7 +42,6 @@
             <button :class="{active: tab === 'branding'}" @click="tab = 'branding'">Brand Assets</button>
             <button :class="{active: tab === 'services'}" @click="tab = 'services'">Services</button>
             <button :class="{active: tab === 'checklist'}" @click="tab = 'checklist'">Checklist Template</button>
-            <button :class="{active: tab === 'bank'}" @click="tab = 'bank'">Bank Details</button>
             <button :class="{active: tab === 'application'}" @click="tab = 'application'">Application</button>
           </div>
 
@@ -146,27 +145,22 @@
             </div>
           </template>
 
-          <!-- Bank Details -->
-          <template x-if="tab === 'bank'">
-            <div class="panel">
-              <div class="panel-title">Bank Details</div>
-              <div class="field"><label>Account Name</label><input type="text" x-model="settings.bankDetails.accountName" /></div>
-              <div class="field-row">
-                <div class="field"><label>Bank Name</label><input type="text" x-model="settings.bankDetails.bankName" /></div>
-                <div class="field"><label>Account Number</label><input type="text" x-model="settings.bankDetails.accountNumber" /></div>
-              </div>
-              <div class="field-row">
-                <div class="field"><label>IFSC Code</label><input type="text" x-model="settings.bankDetails.ifscCode" /></div>
-                <div class="field"><label>UPI ID</label><input type="text" x-model="settings.bankDetails.upiId" /></div>
-              </div>
-              <button class="primary" @click="save()">Save</button>
-            </div>
-          </template>
-
           <!-- Application -->
           <template x-if="tab === 'application'">
             <div class="panel">
               <div class="panel-title">Application</div>
+
+              <div class="panel-title" style="font-size:13px; margin-top:0;">Payments</div>
+              <p class="muted" style="font-size:12px;">
+                UPI ID shown under the QR code (public/assets/qr.png) in the "Scan &amp; Pay"
+                section of every generated PDF. Changing it here updates all PDFs generated from now on.
+              </p>
+              <div class="field"><label>UPI ID</label><input type="text" x-model="settings.upiId" /></div>
+              <button class="primary" @click="save()">Save</button>
+
+              <div class="divider"></div>
+
+              <div class="panel-title" style="font-size:13px;">Project Statuses</div>
               <p class="muted" style="font-size:12px;">Project statuses available throughout the app.</p>
               <table>
                 <tbody>

@@ -34,8 +34,6 @@ function invoiceHtml(project, invoice, settings) {
     )
     .join("");
 
-  const bank = settings.bankDetails || {};
-
   const thankYouBlock = invoice.includeThankYou
     ? `
     <div class="thank-you-box">
@@ -79,15 +77,6 @@ function invoiceHtml(project, invoice, settings) {
 
     <div style="margin-top: 6px; font-size: 11px; color: #444;">
       Amount received (this invoice): ${amountToWords(invoice.amount)}
-    </div>
-
-    <h2 class="section-title">Bank Details</h2>
-    <div class="meta-grid">
-      <div><span class="label">Account Name:</span> ${escapeHtml(bank.accountName || "-")}</div>
-      <div><span class="label">Bank:</span> ${escapeHtml(bank.bankName || "-")}</div>
-      <div><span class="label">Account Number:</span> ${escapeHtml(bank.accountNumber || "-")}</div>
-      <div><span class="label">IFSC:</span> ${escapeHtml(bank.ifscCode || "-")}</div>
-      <div><span class="label">UPI:</span> ${escapeHtml(bank.upiId || "-")}</div>
     </div>
 
     ${thankYouBlock}
