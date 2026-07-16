@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Settings · GreyNod Workspace</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <script defer src="/js/format.js"></script>
+  <script defer src="/js/api.js"></script>
+  <script defer src="/js/settings.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+
+    <aside class="sidebar">
+      <div class="brand">GREYNOD WORKSPACE</div>
+      <div class="brand-version">v2.0</div>
+      <hr />
+      <div class="section-label">Menu</div>
+      <nav>
+        <a href="/index.html">Dashboard</a>
+        <a href="/projects.html">Projects</a>
+        <a href="/settings.html" class="active">Settings</a>
+      </nav>
+      <div class="sidebar-footer">
+        <hr />
+        GreyNod Digital<br />Workspace
+      </div>
+    </aside>
+
+    <main class="main" x-data="settingsPage()" x-init="load()">
+      <div class="top-bar"><div class="page-title">Settings</div></div>
+      <hr class="page-title-rule" />
+
+      <template x-if="loading"><div class="empty-state">Loading…</div></template>
+
+      <template x-if="!loading">
+        <div>
+          <div class="tabs">
+            <button :class="{active: tab === 'company'}" @click="tab = 'company'">Company</button>
+            <button :class="{active: tab === 'branding'}" @click="tab = 'branding'">Brand Assets</button>
+            <button :class="{active: tab === 'services'}" @click="tab = 'services'">Services</button>
+            <button :class="{active: tab === 'checklist'}" @click="tab = 'checklist'">Checklist Template</button>
+            <button :class="{active: tab === 'bank'}" @click="tab = 'bank'">Bank Details</button>
+            <button :class="{active: tab === 'application'}" @click="tab = 'application'">Application</button>
+          </div>
+
+          <template x-if="saved"><div class="panel" style="border-color:#222;">Saved.</div></template>
+
+          <!-- Company -->
+          <template x-if="tab === 'company'">
+            <div class="panel">
+              <div class="panel-title">Company Information</div>
+              <div class="field"><label>Company Name</label><input type="text" x-model="settings.company.name" /></div>
+              <div class="field-row">
+                <div class="field"><label>Email</label><input type="email" x-model="settings.company.email" /></div>
+                <div class="field"><label>Phone</label><input type="text" x-model="settings.company.phone" /></div>
+              </div>
+              <div class="field"><label>Address</label><input type="text" x-model="settings.company.address" /></div>
+              <div class="field"><label>Website</label><input type="text" x-model="settings.company.website" /></div>
+              <button class="primary" @click="save()">Save</button>
+            </div>
+          </template>
+
+          <!-- Brand Assets (fixed, not editable) -->
+          <template x-if="tab === 'branding'">
+            <div class="panel">
+              <div class="panel-title">Brand Assets</div>
+              <p class="muted" style="font-size:12px;">
+                The logo and stamp are fixed application assets used on every generated PDF.
+                There is no signature anywhere in this app. To change these images, replace the
+                files at the paths below and restart the app - there is nothing to configure here.
+              </p>
+              <div class="field-row">
+                <div class="field">
+                  <label>Logo</label>
+                  <div class="panel" style="text-align:center; padding: 20px;">
+                    <img src="/assets/logo.png" alt="GreyNod logo" style="max-width: 200px; max-height: 90px;" />
+                    <div class="muted" style="font-size:11px; margin-top:8px;">public/assets/logo.png</div>
+                  </div>
+                </div>
+                <div class="field">
+                  <label>Stamp</label>
+                  <div class="panel" style="text-align:center; padding: 20px;">
+                    <img src="/assets/stamp.png" alt="GreyNod stamp" style="max-width: 120px; max-height: 120px;" />
+                    <div class="muted" style="font-size:11px; margin-top:8px;">public/assets/stamp.png</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <!-- Services -->
+          <template x-if="tab === 'services'">
+            <div class="panel">
+              <div class="panel-title">Services</div>
+              <p class="muted" style="font-size:12px;">Manage the list of service names available when adding services to a project. Prices are entered per-project, not here.</p>
+              <table>
+                <tbody>
+                  <template x-for="(name, idx) in settings.services" :key="idx">
+                    <tr>
+                      <td><input type="text" x-model="settings.services[idx]" /></td>
+                      <td style="width:80px;"><button class="small danger" @click="settings.services.splice(idx,1)">Remove</button></td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+              <div class="actions-row">
+                <input type="text" placeholder="New service name" x-model="newServiceName" style="max-width:300px;" />
+                <button @click="addServiceName()">+ Add</button>
+              </div>
+              <button class="primary" @click="save()">Save</button>
+            </div>
+          </template>
+
+          <!-- Checklist Template -->
+          <template x-if="tab === 'checklist'">
+            <div class="panel">
+              <div class="panel-title">Checklist Template</div>
+              <p class="muted" style="font-size:12px;">Default categories and items offered when building a new project checklist.</p>
+
+              <template x-for="cat in Object.keys(settings.checklistTemplate)" :key="cat">
+                <div class="checklist-category">
+                  <div class="cat-title" x-text="cat"></div>
+                  <template x-for="(item, idx) in settings.checklistTemplate[cat]" :key="idx">
+                    <div class="checklist-item">
+                      <input type="text" x-model="settings.checklistTemplate[cat][idx]" />
+                      <button class="small danger" @click="settings.checklistTemplate[cat].splice(idx,1)">✕</button>
+                    </div>
+                  </template>
+                  <div class="actions-row">
+                    <input type="text" placeholder="New item" x-model="newChecklistItem[cat]" style="max-width:260px;" />
+                    <button class="small" @click="addChecklistItem(cat)">+ Add Item</button>
+                    <button class="small danger" @click="removeCategory(cat)">Remove Category</button>
+                  </div>
+                </div>
+              </template>
+
+              <div class="divider"></div>
+              <div class="actions-row">
+                <input type="text" placeholder="New category name" x-model="newCategoryName" style="max-width:260px;" />
+                <button @click="addCategory()">+ Add Category</button>
+              </div>
+              <button class="primary" @click="save()">Save</button>
+            </div>
+          </template>
+
+          <!-- Bank Details -->
+          <template x-if="tab === 'bank'">
+            <div class="panel">
+              <div class="panel-title">Bank Details</div>
+              <div class="field"><label>Account Name</label><input type="text" x-model="settings.bankDetails.accountName" /></div>
+              <div class="field-row">
+                <div class="field"><label>Bank Name</label><input type="text" x-model="settings.bankDetails.bankName" /></div>
+                <div class="field"><label>Account Number</label><input type="text" x-model="settings.bankDetails.accountNumber" /></div>
+              </div>
+              <div class="field-row">
+                <div class="field"><label>IFSC Code</label><input type="text" x-model="settings.bankDetails.ifscCode" /></div>
+                <div class="field"><label>UPI ID</label><input type="text" x-model="settings.bankDetails.upiId" /></div>
+              </div>
+              <button class="primary" @click="save()">Save</button>
+            </div>
+          </template>
+
+          <!-- Application -->
+          <template x-if="tab === 'application'">
+            <div class="panel">
+              <div class="panel-title">Application</div>
+              <p class="muted" style="font-size:12px;">Project statuses available throughout the app.</p>
+              <table>
+                <tbody>
+                  <template x-for="(status, idx) in settings.projectStatuses" :key="idx">
+                    <tr>
+                      <td><input type="text" x-model="settings.projectStatuses[idx]" /></td>
+                      <td style="width:80px;"><button class="small danger" @click="settings.projectStatuses.splice(idx,1)">Remove</button></td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+              <div class="actions-row">
+                <input type="text" placeholder="New status" x-model="newStatusName" style="max-width:260px;" />
+                <button @click="addStatus()">+ Add</button>
+              </div>
+              <button class="primary" @click="save()">Save</button>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <div class="footer-note">© GreyNod Digital. All rights reserved.</div>
+    </main>
+  </div>
+</body>
+</html>

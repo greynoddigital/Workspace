@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Projects · GreyNod Workspace</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <script defer src="/js/format.js"></script>
+  <script defer src="/js/api.js"></script>
+  <script defer src="/js/projects.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+
+    <aside class="sidebar">
+      <div class="brand">GREYNOD WORKSPACE</div>
+      <div class="brand-version">v2.0</div>
+      <hr />
+      <div class="section-label">Menu</div>
+      <nav>
+        <a href="/index.html">Dashboard</a>
+        <a href="/projects.html" class="active">Projects</a>
+        <a href="/settings.html">Settings</a>
+      </nav>
+      <div class="sidebar-footer">
+        <hr />
+        GreyNod Digital<br />Workspace
+      </div>
+    </aside>
+
+    <main class="main" x-data="projectsPage()" x-init="load()">
+      <div class="top-bar">
+        <div class="page-title">Projects</div>
+      </div>
+      <hr class="page-title-rule" />
+
+      <div class="actions-row">
+        <input type="text" placeholder="Search by name, client, phone, email, status..." x-model="query" @input.debounce.250ms="search()" style="max-width: 420px;" />
+        <button class="primary" @click="openCreateModal()">+ New Project</button>
+      </div>
+
+      <div class="panel">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Project ID</th><th>Project Name</th><th>Client</th><th>Status</th>
+                <th class="text-right">Total</th><th class="text-right">Paid</th><th class="text-right">Pending</th><th>Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="p in projects" :key="p.id">
+                <tr style="cursor:pointer" @click="window.location.href = '/project.html?id=' + p.id">
+                  <td x-text="p.id"></td>
+                  <td x-text="p.projectName"></td>
+                  <td x-text="p.clientName"></td>
+                  <td><span class="badge" x-text="p.status"></span></td>
+                  <td class="text-right" x-text="formatCurrency(totals(p).total)"></td>
+                  <td class="text-right" x-text="formatCurrency(totals(p).paid)"></td>
+                  <td class="text-right" x-text="formatCurrency(totals(p).pending)"></td>
+                  <td x-text="formatDate(p.updatedAt)"></td>
+                </tr>
+              </template>
+              <template x-if="!loading && projects.length === 0">
+                <tr><td colspan="8" class="empty-state">No projects found.</td></tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Create Project modal -->
+      <div class="modal-overlay" x-show="showCreate" x-cloak @click.self="showCreate = false">
+        <div class="modal">
+          <div class="modal-title">New Project</div>
+          <template x-if="formError"><div class="error-box" x-text="formError"></div></template>
+
+          <div class="field">
+            <label>Project Name</label>
+            <input type="text" x-model="form.projectName" />
+          </div>
+          <div class="field">
+            <label>Client Name</label>
+            <input type="text" x-model="form.clientName" />
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Phone</label>
+              <input type="text" x-model="form.phone" />
+            </div>
+            <div class="field">
+              <label>Email</label>
+              <input type="email" x-model="form.email" />
+            </div>
+          </div>
+          <div class="field">
+            <label>Location</label>
+            <input type="text" x-model="form.location" />
+          </div>
+          <div class="field">
+            <label>Description</label>
+            <textarea style="min-height: 80px;" x-model="form.description"></textarea>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Status</label>
+              <select x-model="form.status">
+                <template x-for="s in statuses" :key="s"><option :value="s" x-text="s"></option></template>
+              </select>
+            </div>
+            <div class="field">
+              <label>Start Date</label>
+              <input type="date" x-model="form.startDate" />
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Expected Delivery</label>
+              <input type="date" x-model="form.expectedDelivery" />
+            </div>
+            <div class="field">
+              <label>Completed Date</label>
+              <input type="date" x-model="form.completedDate" />
+            </div>
+          </div>
+
+          <div class="actions-row">
+            <button class="primary" @click="createProject()">Create Project</button>
+            <button @click="showCreate = false">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-note">© GreyNod Digital. All rights reserved.</div>
+    </main>
+  </div>
+</body>
+</html>

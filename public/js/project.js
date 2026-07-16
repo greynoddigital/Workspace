@@ -1,0 +1,265 @@
+// public/js/project.js
+//
+// Alpine component backing project.html (the Project detail page).
+// Handles all six tabs: Overview, Services, Payments, Files, Notes,
+// Documents - plus the three document-creation modals.
+
+function projectDetailPage() {
+  return {
+    // ─── Core state ────────────────────────────────────────────────────
+    loading: true,
+    project: null,
+    projectId: new URLSearchParams(window.location.search).get("id"),
+    tab: "overview",
+    statuses: ["Lead", "In Progress", "Completed", "On Hold", "Cancelled"],
+    serviceOptions: [],
+    formError: "",
+
+    async load() {
+      this.loading = true;
+      try {
+        const settings = await api.get("/api/settings");
+        if (settings.projectStatuses) this.statuses = settings.projectStatuses;
+        if (settings.services) this.serviceOptions = settings.services;
+        this.checklistTemplate = settings.checklistTemplate || {};
+        this.defaultQuotationTerms = settings.defaultQuotationTerms || "";
+
+        this.project = await api.get("/api/projects/" + this.projectId);
+        this.editForm = { ...this.project };
+        this.notesContent = (await api.get("/api/projects/" + this.projectId + "/notes")).content;
+      } catch (err) {
+        console.error(err);
+        this.project = null;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    get totals() {
+      if (!this.project) return { total: 0, paid: 0, pending: 0 };
+      const total = (this.project.services || []).reduce((sum, s) => sum + Number(s.price) * Number(s.quantity), 0);
+      const paid = (this.project.payments || []).reduce((sum, p) => sum + Number(p.amount), 0);
+      return { total, paid, pending: Math.max(0, total - paid) };
+    },
+
+    get unbilledPayments() {
+      if (!this.project) return [];
+      return (this.project.payments || []).filter((p) => !p.invoicedInInvoiceId);
+    },
+
+    // ─── Overview tab ──────────────────────────────────────────────────
+    editForm: {},
+
+    async saveOverview() {
+      this.formError = "";
+      try {
+        this.project = await api.put("/api/projects/" + this.projectId, this.editForm);
+      } catch (err) {
+        this.formError = err.message;
+      }
+    },
+
+    showDeleteConfirm: false,
+    confirmDelete() {
+      this.showDeleteConfirm = true;
+    },
+    async deleteProject() {
+      try {
+        await api.del("/api/projects/" + this.projectId);
+        window.location.href = "/projects.html";
+      } catch (err) {
+        alert(err.message);
+      }
+    },
+
+    // ─── Services tab ──────────────────────────────────────────────────
+    serviceForm: { name: "", price: "", quantity: 1 },
+    serviceError: "",
+
+    async addService() {
+      this.serviceError = "";
+      try {
+        await api.post("/api/projects/" + this.projectId + "/services", this.serviceForm);
+        this.project = await api.get("/api/projects/" + this.projectId);
+        this.serviceForm = { name: "", price: "", quantity: 1 };
+      } catch (err) {
+        this.serviceError = err.message;
+      }
+    },
+
+    async deleteService(serviceId) {
+      if (!confirm("Remove this service?")) return;
+      await api.del("/api/projects/" + this.projectId + "/services/" + serviceId);
+      this.project = await api.get("/api/projects/" + this.projectId);
+    },
+
+    // ─── Payments tab ──────────────────────────────────────────────────
+    paymentForm: { date: "", amount: "", method: "", reference: "", notes: "" },
+    paymentError: "",
+
+    async addPayment() {
+      this.paymentError = "";
+      try {
+        await api.post("/api/projects/" + this.projectId + "/payments", this.paymentForm);
+        this.project = await api.get("/api/projects/" + this.projectId);
+        this.paymentForm = { date: "", amount: "", method: "", reference: "", notes: "" };
+      } catch (err) {
+        this.paymentError = err.message;
+      }
+    },
+
+    async deletePayment(paymentId) {
+      if (!confirm("Remove this payment?")) return;
+      await api.del("/api/projects/" + this.projectId + "/payments/" + paymentId);
+      this.project = await api.get("/api/projects/" + this.projectId);
+    },
+
+    // ─── Files tab ─────────────────────────────────────────────────────
+    fileForm: { fileName: "", driveLink: "" },
+    fileError: "",
+
+    async addFile() {
+      this.fileError = "";
+      try {
+        await api.post("/api/projects/" + this.projectId + "/files", this.fileForm);
+        this.project = await api.get("/api/projects/" + this.projectId);
+        this.fileForm = { fileName: "", driveLink: "" };
+      } catch (err) {
+        this.fileError = err.message;
+      }
+    },
+
+    async deleteFile(fileId) {
+      if (!confirm("Remove this file link?")) return;
+      await api.del("/api/projects/" + this.projectId + "/files/" + fileId);
+      this.project = await api.get("/api/projects/" + this.projectId);
+    },
+
+    // ─── Notes tab ─────────────────────────────────────────────────────
+    notesContent: "",
+    notesSaved: false,
+
+    async saveNotes() {
+      await api.put("/api/projects/" + this.projectId + "/notes", { content: this.notesContent });
+      this.notesSaved = true;
+      setTimeout(() => (this.notesSaved = false), 2000);
+    },
+
+    // ─── Documents tab ─────────────────────────────────────────────────
+    documents: { quotations: [], checklists: [], invoices: [] },
+    checklistTemplate: {},
+    docError: "",
+
+    async loadDocuments() {
+      this.documents = await api.get("/api/projects/" + this.projectId + "/documents");
+    },
+
+    async saveDriveLink(kind, doc) {
+      await api.put("/api/projects/" + this.projectId + "/" + kind + "/" + doc.id, { driveLink: doc.driveLink });
+    },
+
+    async deleteDoc(kind, docId) {
+      if (!confirm("Delete this document record?")) return;
+      await api.del("/api/projects/" + this.projectId + "/" + kind + "/" + docId);
+      await this.loadDocuments();
+      if (kind === "invoices") this.project = await api.get("/api/projects/" + this.projectId);
+    },
+
+    // Quotation modal
+    showQuotationModal: false,
+    quotationForm: { date: "", items: [], terms: "" },
+    defaultQuotationTerms: "",
+
+    openQuotationModal() {
+      this.docError = "";
+      this.quotationForm = {
+        date: new Date().toISOString().slice(0, 10),
+        items: (this.project.services || []).map((s) => ({ name: s.name, price: s.price, quantity: s.quantity })),
+        terms: this.defaultQuotationTerms,
+      };
+      if (this.quotationForm.items.length === 0) {
+        this.quotationForm.items.push({ name: "", price: 0, quantity: 1 });
+      }
+      this.showQuotationModal = true;
+    },
+
+    async createQuotation() {
+      this.docError = "";
+      try {
+        await api.post("/api/projects/" + this.projectId + "/quotations", {
+          date: this.quotationForm.date,
+          items: this.quotationForm.items,
+          terms: this.quotationForm.terms,
+        });
+        this.showQuotationModal = false;
+        await this.loadDocuments();
+      } catch (err) {
+        this.docError = err.message;
+      }
+    },
+
+    // Checklist modal
+    showChecklistModal: false,
+    checklistForm: { date: "", categories: {}, customItems: [] },
+
+    openChecklistModal() {
+      this.docError = "";
+      const categories = {};
+      for (const [catName, items] of Object.entries(this.checklistTemplate)) {
+        categories[catName] = items.map((label) => ({ label, checked: false }));
+      }
+      this.checklistForm = {
+        date: new Date().toISOString().slice(0, 10),
+        categories,
+        customItems: [],
+      };
+      this.showChecklistModal = true;
+    },
+
+    async createChecklist() {
+      this.docError = "";
+      try {
+        await api.post("/api/projects/" + this.projectId + "/checklists", {
+          date: this.checklistForm.date,
+          categories: this.checklistForm.categories,
+          customItems: this.checklistForm.customItems,
+        });
+        this.showChecklistModal = false;
+        await this.loadDocuments();
+      } catch (err) {
+        this.docError = err.message;
+      }
+    },
+
+    // Invoice modal
+    showInvoiceModal: false,
+    invoiceForm: { date: "", paymentIds: [] },
+
+    openInvoiceModal() {
+      this.docError = "";
+      this.invoiceForm = {
+        date: new Date().toISOString().slice(0, 10),
+        paymentIds: this.unbilledPayments.map((p) => p.id),
+      };
+      this.showInvoiceModal = true;
+    },
+
+    async createInvoice() {
+      this.docError = "";
+      try {
+        await api.post("/api/projects/" + this.projectId + "/invoices", {
+          date: this.invoiceForm.date,
+          paymentIds: this.invoiceForm.paymentIds,
+        });
+        this.showInvoiceModal = false;
+        this.project = await api.get("/api/projects/" + this.projectId);
+        await this.loadDocuments();
+      } catch (err) {
+        this.docError = err.message;
+      }
+    },
+
+    formatCurrency,
+    formatDate,
+  };
+}

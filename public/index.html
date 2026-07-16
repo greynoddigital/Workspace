@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard · GreyNod Workspace</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <script defer src="/js/format.js"></script>
+  <script defer src="/js/api.js"></script>
+  <script defer src="/js/dashboard.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+
+    <aside class="sidebar">
+      <div class="brand">GREYNOD WORKSPACE</div>
+      <div class="brand-version">v2.0</div>
+      <hr />
+      <div class="section-label">Menu</div>
+      <nav>
+        <a href="/index.html" class="active">Dashboard</a>
+        <a href="/projects.html">Projects</a>
+        <a href="/settings.html">Settings</a>
+      </nav>
+      <hr />
+      <div class="section-label">Quick Actions</div>
+      <div class="quick-actions">
+        <a href="/projects.html?new=1">[+] New Project</a>
+      </div>
+      <div class="sidebar-footer">
+        <hr />
+        GreyNod Digital<br />Workspace
+      </div>
+    </aside>
+
+    <main class="main" x-data="dashboardPage()" x-init="load()">
+      <div class="top-bar">
+        <div>
+          <div class="page-title">Dashboard</div>
+        </div>
+        <div class="tag">No Login. No Users.</div>
+      </div>
+      <hr class="page-title-rule" />
+
+      <template x-if="loading">
+        <div class="empty-state">Loading…</div>
+      </template>
+
+      <template x-if="!loading">
+        <div>
+          <div class="stat-grid">
+            <div class="stat-card">
+              <div class="label">Total Projects</div>
+              <div class="value" x-text="stats.totalProjects"></div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Active Projects</div>
+              <div class="value" x-text="stats.activeProjects"></div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Completed Projects</div>
+              <div class="value" x-text="stats.completedProjects"></div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Total Payment Received</div>
+              <div class="value" x-text="formatCurrency(stats.totalPaymentReceived)"></div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Total Payment Pending</div>
+              <div class="value" x-text="formatCurrency(stats.totalPaymentPending)"></div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-title">Recent Projects</div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Project ID</th><th>Project Name</th><th>Client</th><th>Status</th>
+                    <th class="text-right">Total</th><th class="text-right">Paid</th><th class="text-right">Pending</th><th>Updated</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="p in stats.recentProjects" :key="p.id">
+                    <tr onclick="" style="cursor:pointer" @click="window.location.href = '/project.html?id=' + p.id">
+                      <td x-text="p.id"></td>
+                      <td x-text="p.projectName"></td>
+                      <td x-text="p.clientName"></td>
+                      <td><span class="badge" x-text="p.status"></span></td>
+                      <td class="text-right" x-text="formatCurrency(p.total)"></td>
+                      <td class="text-right" x-text="formatCurrency(p.paid)"></td>
+                      <td class="text-right" x-text="formatCurrency(p.pending)"></td>
+                      <td x-text="formatDate(p.updatedAt)"></td>
+                    </tr>
+                  </template>
+                  <template x-if="stats.recentProjects.length === 0">
+                    <tr><td colspan="8" class="empty-state">No projects yet. Create your first project to get started.</td></tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+            <div class="actions-row">
+              <a class="btn" href="/projects.html">View all projects →</a>
+            </div>
+          </div>
+
+          <div class="actions-row">
+            <a class="btn primary" href="/projects.html?new=1">+ New Project</a>
+          </div>
+        </div>
+      </template>
+
+      <div class="footer-note">© GreyNod Digital. All rights reserved.</div>
+    </main>
+  </div>
+</body>
+</html>

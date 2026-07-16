@@ -1,0 +1,24 @@
+{
+  "name": "greynod-workspace",
+  "version": "2.1.0",
+  "private": true,
+  "description": "GreyNod Workspace v2.1 - a simple, personal business workspace for GreyNod Digital, backed by a private GitHub repo instead of the local filesystem",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "@octokit/rest": "^19.0.13",
+    "dotenv": "^16.4.5",
+    "@sparticuz/chromium": "^123.0.1",
+    "puppeteer-core": "^22.15.0"
+  },
+  "devDependencies": {
+    "puppeteer": "^22.15.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

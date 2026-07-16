@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project · GreyNod Workspace</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <script defer src="/js/format.js"></script>
+  <script defer src="/js/api.js"></script>
+  <script defer src="/js/project.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+
+    <aside class="sidebar">
+      <div class="brand">GREYNOD WORKSPACE</div>
+      <div class="brand-version">v2.0</div>
+      <hr />
+      <div class="section-label">Menu</div>
+      <nav>
+        <a href="/index.html">Dashboard</a>
+        <a href="/projects.html" class="active">Projects</a>
+        <a href="/settings.html">Settings</a>
+      </nav>
+      <div class="sidebar-footer">
+        <hr />
+        GreyNod Digital<br />Workspace
+      </div>
+    </aside>
+
+    <main class="main" x-data="projectDetailPage()" x-init="load()">
+
+      <template x-if="loading"><div class="empty-state">Loading…</div></template>
+      <template x-if="!loading && !project"><div class="empty-state">Project not found.</div></template>
+
+      <template x-if="!loading && project">
+        <div>
+          <div class="top-bar">
+            <div>
+              <div class="page-title" x-text="project.projectName"></div>
+              <div class="muted" x-text="project.id + ' · ' + project.clientName"></div>
+            </div>
+            <div class="tag"><span class="badge" x-text="project.status"></span></div>
+          </div>
+          <hr class="page-title-rule" />
+
+          <div class="tabs">
+            <button :class="{active: tab === 'overview'}" @click="tab = 'overview'">Overview</button>
+            <button :class="{active: tab === 'services'}" @click="tab = 'services'">Services</button>
+            <button :class="{active: tab === 'payments'}" @click="tab = 'payments'">Payments</button>
+            <button :class="{active: tab === 'files'}" @click="tab = 'files'">Files</button>
+            <button :class="{active: tab === 'notes'}" @click="tab = 'notes'">Notes</button>
+            <button :class="{active: tab === 'documents'}" @click="tab = 'documents'; loadDocuments()">Documents</button>
+          </div>
+
+          <!-- ─── OVERVIEW TAB ─────────────────────────────────────────── -->
+          <template x-if="tab === 'overview'">
+            <div class="panel">
+              <template x-if="formError"><div class="error-box" x-text="formError"></div></template>
+              <div class="field-row">
+                <div class="field"><label>Project Name</label><input type="text" x-model="editForm.projectName" /></div>
+                <div class="field"><label>Client Name</label><input type="text" x-model="editForm.clientName" /></div>
+              </div>
+              <div class="field-row">
+                <div class="field"><label>Phone</label><input type="text" x-model="editForm.phone" /></div>
+                <div class="field"><label>Email</label><input type="email" x-model="editForm.email" /></div>
+              </div>
+              <div class="field"><label>Location</label><input type="text" x-model="editForm.location" /></div>
+              <div class="field"><label>Description</label><textarea style="min-height:80px" x-model="editForm.description"></textarea></div>
+              <div class="field-row">
+                <div class="field">
+                  <label>Status</label>
+                  <select x-model="editForm.status">
+                    <template x-for="s in statuses" :key="s"><option :value="s" x-text="s"></option></template>
+                  </select>
+                </div>
+                <div class="field"><label>Start Date</label><input type="date" x-model="editForm.startDate" /></div>
+              </div>
+              <div class="field-row">
+                <div class="field"><label>Expected Delivery</label><input type="date" x-model="editForm.expectedDelivery" /></div>
+                <div class="field"><label>Completed Date</label><input type="date" x-model="editForm.completedDate" /></div>
+              </div>
+              <div class="actions-row">
+                <button class="primary" @click="saveOverview()">Save Changes</button>
+                <button class="danger" @click="confirmDelete()">Delete Project</button>
+              </div>
+            </div>
+          </template>
+
+          <!-- ─── SERVICES TAB ─────────────────────────────────────────── -->
+          <template x-if="tab === 'services'">
+            <div class="panel">
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Service</th><th class="text-right">Price</th><th class="text-right">Qty</th><th class="text-right">Total</th><th></th></tr></thead>
+                  <tbody>
+                    <template x-for="s in project.services" :key="s.id">
+                      <tr>
+                        <td x-text="s.name"></td>
+                        <td class="text-right" x-text="formatCurrency(s.price)"></td>
+                        <td class="text-right" x-text="s.quantity"></td>
+                        <td class="text-right" x-text="formatCurrency(s.price * s.quantity)"></td>
+                        <td><button class="small danger" @click="deleteService(s.id)">Remove</button></td>
+                      </tr>
+                    </template>
+                    <template x-if="project.services.length === 0">
+                      <tr><td colspan="5" class="empty-state">No services added yet.</td></tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+              <div class="divider"></div>
+              <div class="field-row">
+                <div class="field">
+                  <label>Service</label>
+                  <select x-model="serviceForm.name">
+                    <option value="">Select a service...</option>
+                    <template x-for="name in serviceOptions" :key="name"><option :value="name" x-text="name"></option></template>
+                  </select>
+                </div>
+                <div class="field"><label>Price (₹)</label><input type="number" min="0" x-model="serviceForm.price" /></div>
+              </div>
+              <div class="field-row">
+                <div class="field"><label>Quantity</label><input type="number" min="1" x-model="serviceForm.quantity" /></div>
+                <div class="field" style="display:flex; align-items:flex-end;"><button class="primary" @click="addService()">Add Service</button></div>
+              </div>
+              <template x-if="serviceError"><div class="error-box" x-text="serviceError"></div></template>
+            </div>
+          </template>
+
+          <!-- ─── PAYMENTS TAB ─────────────────────────────────────────── -->
+          <template x-if="tab === 'payments'">
+            <div class="panel">
+              <div class="stat-grid">
+                <div class="stat-card"><div class="label">Project Total</div><div class="value" x-text="formatCurrency(totals.total)"></div></div>
+                <div class="stat-card"><div class="label">Paid</div><div class="value" x-text="formatCurrency(totals.paid)"></div></div>
+                <div class="stat-card"><div class="label">Pending</div><div class="value" x-text="formatCurrency(totals.pending)"></div></div>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Reference</th><th>Notes</th><th></th></tr></thead>
+                  <tbody>
+                    <template x-for="p in project.payments" :key="p.id">
+                      <tr>
+                        <td x-text="formatDate(p.date)"></td>
+                        <td x-text="formatCurrency(p.amount)"></td>
+                        <td x-text="p.method"></td>
+                        <td x-text="p.reference || '-'"></td>
+                        <td x-text="p.notes || '-'"></td>
+                        <td><button class="small danger" @click="deletePayment(p.id)">Remove</button></td>
+                      </tr>
+                    </template>
+                    <template x-if="project.payments.length === 0">
+                      <tr><td colspan="6" class="empty-state">No payments recorded yet.</td></tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+              <div class="divider"></div>
+              <div class="field-row">
+                <div class="field"><label>Date</label><input type="date" x-model="paymentForm.date" /></div>
+                <div class="field"><label>Amount (₹)</label><input type="number" min="0" x-model="paymentForm.amount" /></div>
+              </div>
+              <div class="field-row">
+                <div class="field"><label>Method</label><input type="text" placeholder="UPI / Bank Transfer / Cash..." x-model="paymentForm.method" /></div>
+                <div class="field"><label>Reference</label><input type="text" x-model="paymentForm.reference" /></div>
+              </div>
+              <div class="field"><label>Notes</label><input type="text" x-model="paymentForm.notes" /></div>
+              <button class="primary" @click="addPayment()">Add Payment</button>
+              <template x-if="paymentError"><div class="error-box" x-text="paymentError"></div></template>
+            </div>
+          </template>
+
+          <!-- ─── FILES TAB ────────────────────────────────────────────── -->
+          <template x-if="tab === 'files'">
+            <div class="panel">
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>File Name</th><th></th><th></th></tr></thead>
+                  <tbody>
+                    <template x-for="f in project.files" :key="f.id">
+                      <tr>
+                        <td x-text="f.fileName"></td>
+                        <td><a class="btn small" :href="f.driveLink" target="_blank" rel="noopener">Open</a></td>
+                        <td><button class="small danger" @click="deleteFile(f.id)">Remove</button></td>
+                      </tr>
+                    </template>
+                    <template x-if="project.files.length === 0">
+                      <tr><td colspan="3" class="empty-state">No files linked yet.</td></tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+              <div class="divider"></div>
+              <div class="field-row">
+                <div class="field"><label>File Name</label><input type="text" x-model="fileForm.fileName" /></div>
+                <div class="field"><label>Google Drive Link</label><input type="text" x-model="fileForm.driveLink" /></div>
+              </div>
+              <button class="primary" @click="addFile()">Add File</button>
+              <template x-if="fileError"><div class="error-box" x-text="fileError"></div></template>
+            </div>
+          </template>
+
+          <!-- ─── NOTES TAB ────────────────────────────────────────────── -->
+          <template x-if="tab === 'notes'">
+            <div class="panel">
+              <div class="actions-row">
+                <button @click="saveNotes()" class="primary">Save Notes</button>
+                <span class="muted" x-show="notesSaved" x-cloak>Saved.</span>
+              </div>
+              <textarea style="min-height: 400px;" x-model="notesContent" placeholder="Store passwords, hosting details, meeting notes, pending work - anything related to this project."></textarea>
+            </div>
+          </template>
+
+          <!-- ─── DOCUMENTS TAB ────────────────────────────────────────── -->
+          <template x-if="tab === 'documents'">
+            <div>
+              <!-- Quotations -->
+              <div class="panel">
+                <div class="panel-title">Quotations</div>
+                <div class="table-wrap">
+                  <table>
+                    <thead><tr><th>Number</th><th>Date</th><th>Drive Link</th><th></th></tr></thead>
+                    <tbody>
+                      <template x-for="q in documents.quotations" :key="q.id">
+                        <tr>
+                          <td x-text="q.number"></td>
+                          <td x-text="formatDate(q.date)"></td>
+                          <td>
+                            <input type="text" placeholder="Paste Drive link after uploading" x-model="q.driveLink" @change="saveDriveLink('quotations', q)" />
+                          </td>
+                          <td style="white-space:nowrap;">
+                            <a class="btn small" :href="'/api/projects/' + project.id + '/quotations/' + q.id + '/pdf'" target="_blank">PDF</a>
+                            <button class="small danger" @click="deleteDoc('quotations', q.id)">Delete</button>
+                          </td>
+                        </tr>
+                      </template>
+                      <template x-if="documents.quotations.length === 0">
+                        <tr><td colspan="4" class="empty-state">No quotations yet.</td></tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+                <button class="primary" @click="openQuotationModal()">+ Create Quotation</button>
+              </div>
+
+              <!-- Checklists -->
+              <div class="panel">
+                <div class="panel-title">Checklists</div>
+                <div class="table-wrap">
+                  <table>
+                    <thead><tr><th>Number</th><th>Date</th><th>Drive Link</th><th></th></tr></thead>
+                    <tbody>
+                      <template x-for="c in documents.checklists" :key="c.id">
+                        <tr>
+                          <td x-text="c.number"></td>
+                          <td x-text="formatDate(c.date)"></td>
+                          <td>
+                            <input type="text" placeholder="Paste Drive link after uploading" x-model="c.driveLink" @change="saveDriveLink('checklists', c)" />
+                          </td>
+                          <td style="white-space:nowrap;">
+                            <a class="btn small" :href="'/api/projects/' + project.id + '/checklists/' + c.id + '/pdf'" target="_blank">PDF</a>
+                            <button class="small danger" @click="deleteDoc('checklists', c.id)">Delete</button>
+                          </td>
+                        </tr>
+                      </template>
+                      <template x-if="documents.checklists.length === 0">
+                        <tr><td colspan="4" class="empty-state">No checklists yet.</td></tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+                <button class="primary" @click="openChecklistModal()">+ Create Checklist</button>
+              </div>
+
+              <!-- Invoices -->
+              <div class="panel">
+                <div class="panel-title">Invoices</div>
+                <div class="table-wrap">
+                  <table>
+                    <thead><tr><th>Number</th><th>Date</th><th>Type</th><th class="text-right">Amount</th><th>Drive Link</th><th></th></tr></thead>
+                    <tbody>
+                      <template x-for="inv in documents.invoices" :key="inv.id">
+                        <tr>
+                          <td x-text="inv.number"></td>
+                          <td x-text="formatDate(inv.date)"></td>
+                          <td x-text="inv.type"></td>
+                          <td class="text-right" x-text="formatCurrency(inv.amount)"></td>
+                          <td>
+                            <input type="text" placeholder="Paste Drive link after uploading" x-model="inv.driveLink" @change="saveDriveLink('invoices', inv)" />
+                          </td>
+                          <td style="white-space:nowrap;">
+                            <a class="btn small" :href="'/api/projects/' + project.id + '/invoices/' + inv.id + '/pdf'" target="_blank">PDF</a>
+                            <button class="small danger" @click="deleteDoc('invoices', inv.id)">Delete</button>
+                          </td>
+                        </tr>
+                      </template>
+                      <template x-if="documents.invoices.length === 0">
+                        <tr><td colspan="6" class="empty-state">No invoices yet.</td></tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+                <button class="primary" @click="openInvoiceModal()" :disabled="unbilledPayments.length === 0">+ Generate Invoice</button>
+                <span class="muted" x-show="unbilledPayments.length === 0" x-cloak> — all payments already invoiced.</span>
+              </div>
+            </div>
+          </template>
+
+        </div>
+      </template>
+
+      <!-- ─── QUOTATION MODAL ──────────────────────────────────────────── -->
+      <div class="modal-overlay" x-show="showQuotationModal" x-cloak @click.self="showQuotationModal = false">
+        <div class="modal" style="max-width: 700px;">
+          <div class="modal-title">New Quotation</div>
+          <template x-if="docError"><div class="error-box" x-text="docError"></div></template>
+          <div class="field"><label>Date</label><input type="date" x-model="quotationForm.date" /></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Service</th><th class="text-right">Price</th><th class="text-right">Qty</th><th></th></tr></thead>
+              <tbody>
+                <template x-for="(item, idx) in quotationForm.items" :key="idx">
+                  <tr>
+                    <td><input type="text" x-model="item.name" /></td>
+                    <td><input type="number" min="0" x-model="item.price" style="text-align:right" /></td>
+                    <td><input type="number" min="1" x-model="item.quantity" style="text-align:right" /></td>
+                    <td><button class="small danger" @click="quotationForm.items.splice(idx,1)">✕</button></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+          <button class="small" @click="quotationForm.items.push({name:'',price:0,quantity:1})">+ Add Line</button>
+
+          <div class="field" style="margin-top: 16px;">
+            <label>Terms &amp; Conditions (one per line, editable)</label>
+            <textarea style="min-height: 160px;" x-model="quotationForm.terms"></textarea>
+          </div>
+
+          <div class="actions-row">
+            <button class="primary" @click="createQuotation()">Generate Quotation</button>
+            <button @click="showQuotationModal = false">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── CHECKLIST MODAL ──────────────────────────────────────────── -->
+      <div class="modal-overlay" x-show="showChecklistModal" x-cloak @click.self="showChecklistModal = false">
+        <div class="modal" style="max-width: 640px; max-height: 85vh; overflow-y: auto;">
+          <div class="modal-title">New Checklist</div>
+          <template x-if="docError"><div class="error-box" x-text="docError"></div></template>
+          <div class="field"><label>Date</label><input type="date" x-model="checklistForm.date" /></div>
+
+          <template x-for="cat in Object.keys(checklistForm.categories)" :key="cat">
+            <div class="checklist-category">
+              <div class="cat-title" x-text="cat"></div>
+              <template x-for="item in checklistForm.categories[cat]" :key="item.label">
+                <label class="checklist-item" style="text-transform:none; letter-spacing:0;">
+                  <input type="checkbox" x-model="item.checked" /> <span x-text="item.label"></span>
+                </label>
+              </template>
+            </div>
+          </template>
+
+          <div class="checklist-category">
+            <div class="cat-title">Custom Items</div>
+            <template x-for="(item, idx) in checklistForm.customItems" :key="idx">
+              <div class="checklist-item">
+                <input type="checkbox" x-model="item.checked" style="width:auto" />
+                <input type="text" x-model="item.label" placeholder="Custom item label" />
+                <button class="small danger" @click="checklistForm.customItems.splice(idx,1)">✕</button>
+              </div>
+            </template>
+            <button class="small" @click="checklistForm.customItems.push({label:'', checked:true})">+ Add Custom Item</button>
+          </div>
+
+          <div class="actions-row">
+            <button class="primary" @click="createChecklist()">Generate Checklist</button>
+            <button @click="showChecklistModal = false">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── INVOICE MODAL ────────────────────────────────────────────── -->
+      <div class="modal-overlay" x-show="showInvoiceModal" x-cloak @click.self="showInvoiceModal = false">
+        <div class="modal">
+          <div class="modal-title">Generate Invoice</div>
+          <template x-if="docError"><div class="error-box" x-text="docError"></div></template>
+          <div class="field"><label>Date</label><input type="date" x-model="invoiceForm.date" /></div>
+          <div class="field">
+            <label>Unbilled Payments To Include</label>
+            <template x-for="p in unbilledPayments" :key="p.id">
+              <label class="checklist-item" style="text-transform:none; letter-spacing:0;">
+                <input type="checkbox" :value="p.id" x-model="invoiceForm.paymentIds" />
+                <span x-text="formatDate(p.date) + ' — ' + formatCurrency(p.amount) + ' (' + p.method + ')'"></span>
+              </label>
+            </template>
+          </div>
+          <div class="muted" style="font-size:12px; margin-bottom:10px;">
+            Invoice type is determined automatically based on the project balance after this invoice.
+          </div>
+          <div class="actions-row">
+            <button class="primary" @click="createInvoice()">Generate Invoice</button>
+            <button @click="showInvoiceModal = false">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── DELETE CONFIRM MODAL ─────────────────────────────────────── -->
+      <div class="modal-overlay" x-show="showDeleteConfirm" x-cloak @click.self="showDeleteConfirm = false">
+        <div class="modal">
+          <div class="modal-title">Delete Project?</div>
+          <p>This will permanently delete this project and all of its services, payments, files, notes, and documents. This cannot be undone.</p>
+          <div class="actions-row">
+            <button class="danger" @click="deleteProject()">Yes, Delete Project</button>
+            <button @click="showDeleteConfirm = false">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-note">© GreyNod Digital. All rights reserved.</div>
+    </main>
+  </div>
+</body>
+</html>
