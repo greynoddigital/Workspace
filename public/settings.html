@@ -94,13 +94,16 @@
           <template x-if="tab === 'services'">
             <div class="panel">
               <div class="panel-title">Services</div>
-              <p class="muted" style="font-size:12px;">Manage the list of service names available when adding services to a project. Prices are entered per-project, not here.</p>
+              <p class="muted" style="font-size:12px;">Manage the services available when adding services to a project. Each service's HSN/SAC and description are stored here and carried onto every quotation that includes it. Prices are entered per-project, not here.</p>
               <table>
+                <thead><tr><th style="width:220px;">Name</th><th style="width:110px;">HSN/SAC</th><th>Description (shown on quotation PDFs, exactly as typed)</th><th style="width:80px;"></th></tr></thead>
                 <tbody>
-                  <template x-for="(name, idx) in settings.services" :key="idx">
+                  <template x-for="(svc, idx) in settings.services" :key="idx">
                     <tr>
-                      <td><input type="text" x-model="settings.services[idx]" /></td>
-                      <td style="width:80px;"><button class="small danger" @click="settings.services.splice(idx,1)">Remove</button></td>
+                      <td><input type="text" x-model="svc.name" /></td>
+                      <td><input type="text" x-model="svc.hsnSac" /></td>
+                      <td><textarea x-model="svc.description" style="min-height:80px; width:100%;"></textarea></td>
+                      <td><button class="small danger" @click="settings.services.splice(idx,1)">Remove</button></td>
                     </tr>
                   </template>
                 </tbody>

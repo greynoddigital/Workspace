@@ -82,6 +82,11 @@ function checklistHtml(project, checklist, settings) {
     bodyHtml,
     docNumber: checklist.number,
     docDate: formatDate(checklist.date),
+    // A checklist is a completion/verification document, not a bill -
+    // it should never carry the Scan & Pay / QR / UPI block. The
+    // company footer (logo, website, email, phone) still comes from
+    // wrapDocument() as normal.
+    showScanAndPay: false,
   });
 }
 

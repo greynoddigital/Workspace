@@ -45,6 +45,14 @@ router.post("/", async (req, res, next) => {
       name: req.body.name.trim(),
       price: Number(req.body.price),
       quantity: Number(req.body.quantity),
+      // Carried over from the service catalog (settings.services) at
+      // the time the service is added to the project, so quotations
+      // built from this project's services can show the full HSN/SAC
+      // and description without having to look the catalog up again
+      // later (and so it stays correct even if the catalog entry is
+      // edited/removed afterwards).
+      hsnSac: (req.body.hsnSac || "").trim(),
+      description: req.body.description || "",
     };
 
     project.services = project.services || [];

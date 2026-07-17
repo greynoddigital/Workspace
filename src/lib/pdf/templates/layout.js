@@ -2,9 +2,15 @@
 //
 // Wraps a document's body HTML with a shared <head> (styles), a
 // header (company name, address, contact info + logo), and a footer
-// (contact info + stamp + "Scan & Pay" block). Every PDF template
-// (quotation, checklist, invoice) uses this function so all documents
-// look consistent and always carry the same company/payment info.
+// (contact info + stamp, optionally followed by a "Scan & Pay"
+// block). Every PDF template (quotation, checklist, invoice) uses
+// this function so all documents look consistent and always carry
+// the same company footer. The company footer (logo/stamp, website,
+// email, phone) always renders; the Scan & Pay block is opt-in per
+// call via showScanAndPay (default true) since not every document
+// type should ask the client to pay - e.g. checklistTemplate.js
+// passes showScanAndPay: false because a checklist is a
+// completion/verification document, not a bill.
 //
 // There is no signature and no bank details anywhere in this app
 // (v2.1). Logo, stamp, and the Scan & Pay QR code are fixed
@@ -98,6 +104,21 @@ const SHARED_STYLES = `
     font-weight: bold;
   }
   .text-right { text-align: right; }
+  .item-name { font-weight: bold; }
+  .item-details {
+    margin-top: 4px;
+  }
+  .item-hsn {
+    font-size: 10.5px;
+    color: #555;
+    margin-bottom: 3px;
+  }
+  .item-description {
+    font-size: 10.5px;
+    color: #333;
+    white-space: pre-wrap;
+    line-height: 1.5;
+  }
   .totals-table td { border: none; padding: 3px 8px; }
   .totals-table .grand-total td {
     border-top: 1px solid #222;

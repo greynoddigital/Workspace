@@ -73,15 +73,26 @@ function projectDetailPage() {
     },
 
     // ─── Services tab ──────────────────────────────────────────────────
-    serviceForm: { name: "", price: "", quantity: 1 },
+    serviceForm: { name: "", price: "", quantity: 1, hsnSac: "", description: "" },
     serviceError: "",
+
+    // serviceOptions holds full catalog entries ({name, hsnSac,
+    // description}), not just names. When the user picks one from the
+    // dropdown, copy its hsnSac/description onto serviceForm so they
+    // get saved on the project service (and from there, into any
+    // quotation built from this project's services).
+    onServiceCatalogPick() {
+      const match = this.serviceOptions.find((s) => s.name === this.serviceForm.name);
+      this.serviceForm.hsnSac = match ? match.hsnSac || "" : "";
+      this.serviceForm.description = match ? match.description || "" : "";
+    },
 
     async addService() {
       this.serviceError = "";
       try {
         await api.post("/api/projects/" + this.projectId + "/services", this.serviceForm);
         this.project = await api.get("/api/projects/" + this.projectId);
-        this.serviceForm = { name: "", price: "", quantity: 1 };
+        this.serviceForm = { name: "", price: "", quantity: 1, hsnSac: "", description: "" };
       } catch (err) {
         this.serviceError = err.message;
       }
@@ -174,13 +185,32 @@ function projectDetailPage() {
       this.docError = "";
       this.quotationForm = {
         date: new Date().toISOString().slice(0, 10),
-        items: (this.project.services || []).map((s) => ({ name: s.name, price: s.price, quantity: s.quantity })),
+        items: (this.project.services || []).map((s) => ({
+          name: s.name,
+          price: s.price,
+          quantity: s.quantity,
+          hsnSac: s.hsnSac || "",
+          description: s.description || "",
+        })),
         terms: this.defaultQuotationTerms,
       };
       if (this.quotationForm.items.length === 0) {
-        this.quotationForm.items.push({ name: "", price: 0, quantity: 1 });
+        this.quotationForm.items.push({ name: "", price: 0, quantity: 1, hsnSac: "", description: "" });
       }
       this.showQuotationModal = true;
+    },
+
+    // If a quotation line's name matches a catalog service and its
+    // hsnSac/description are still blank, fill them in from the
+    // catalog. Used for lines added manually via "+ Add Line" (they
+    // don't come from project.services, so they start out blank).
+    // Never overwrites a value the user already entered/edited.
+    autofillQuotationItem(idx) {
+      const item = this.quotationForm.items[idx];
+      const match = this.serviceOptions.find((s) => s.name === item.name);
+      if (!match) return;
+      if (!item.hsnSac) item.hsnSac = match.hsnSac || "";
+      if (!item.description) item.description = match.description || "";
     },
 
     async createQuotation() {

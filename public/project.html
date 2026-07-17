@@ -114,9 +114,9 @@
               <div class="field-row">
                 <div class="field">
                   <label>Service</label>
-                  <select x-model="serviceForm.name">
+                  <select x-model="serviceForm.name" @change="onServiceCatalogPick()">
                     <option value="">Select a service...</option>
-                    <template x-for="name in serviceOptions" :key="name"><option :value="name" x-text="name"></option></template>
+                    <template x-for="svc in serviceOptions" :key="svc.name"><option :value="svc.name" x-text="svc.name"></option></template>
                   </select>
                 </div>
                 <div class="field"><label>Price (₹)</label><input type="number" min="0" x-model="serviceForm.price" /></div>
@@ -125,6 +125,9 @@
                 <div class="field"><label>Quantity</label><input type="number" min="1" x-model="serviceForm.quantity" /></div>
                 <div class="field" style="display:flex; align-items:flex-end;"><button class="primary" @click="addService()">Add Service</button></div>
               </div>
+              <template x-if="serviceForm.description">
+                <div class="muted" style="font-size:11px; margin-top:8px; white-space:pre-wrap;" x-text="(serviceForm.hsnSac ? 'HSN/SAC: ' + serviceForm.hsnSac + '\n' : '') + serviceForm.description"></div>
+              </template>
               <template x-if="serviceError"><div class="error-box" x-text="serviceError"></div></template>
             </div>
           </template>
@@ -319,20 +322,22 @@
           <div class="field"><label>Date</label><input type="date" x-model="quotationForm.date" /></div>
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Service</th><th class="text-right">Price</th><th class="text-right">Qty</th><th></th></tr></thead>
+              <thead><tr><th>Service</th><th class="text-right">Price</th><th class="text-right">Qty</th><th>HSN/SAC</th><th>Description</th><th></th></tr></thead>
               <tbody>
                 <template x-for="(item, idx) in quotationForm.items" :key="idx">
                   <tr>
-                    <td><input type="text" x-model="item.name" /></td>
+                    <td><input type="text" x-model="item.name" @change="autofillQuotationItem(idx)" /></td>
                     <td><input type="number" min="0" x-model="item.price" style="text-align:right" /></td>
                     <td><input type="number" min="1" x-model="item.quantity" style="text-align:right" /></td>
+                    <td><input type="text" x-model="item.hsnSac" style="width:90px;" /></td>
+                    <td><textarea x-model="item.description" style="min-height:60px; width:220px;" placeholder="Full service description shown on the PDF (auto-filled from the service catalog, editable)"></textarea></td>
                     <td><button class="small danger" @click="quotationForm.items.splice(idx,1)">✕</button></td>
                   </tr>
                 </template>
               </tbody>
             </table>
           </div>
-          <button class="small" @click="quotationForm.items.push({name:'',price:0,quantity:1})">+ Add Line</button>
+          <button class="small" @click="quotationForm.items.push({name:'',price:0,quantity:1,hsnSac:'',description:''})">+ Add Line</button>
 
           <div class="field" style="margin-top: 16px;">
             <label>Terms &amp; Conditions (one per line, editable)</label>

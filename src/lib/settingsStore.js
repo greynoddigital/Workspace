@@ -40,15 +40,83 @@ function defaultSettings() {
     // block on every generated PDF. Editable from Settings ->
     // Application; this default is only used on a fresh install.
     upiId: "vxnuprasad-3@okicici",
-    // Service names only. Prices are entered manually per project.
+    // Service catalog. Each entry is the full definition of a service
+    // that can be attached to a project: its name, its HSN/SAC code
+    // (for tax purposes, optional), and its complete description
+    // (optional, may contain line breaks / bullet points - preserved
+    // as typed). Prices are still entered manually per project, not
+    // here. This is the single source of truth for service
+    // descriptions - project services and quotation line items copy
+    // their hsnSac/description from here at the time they're added,
+    // so quotations can always show the full service detail instead
+    // of just a name.
     services: [
-      "E-commerce Website",
-      "Shopify Store",
-      "Portfolio Website",
-      "Technical Support",
-      "Meta Ads",
-      "SEO Optimization",
-      "Payment Gateway Integration",
+      {
+        name: "E-commerce Website",
+        hsnSac: "998314",
+        description:
+          "Complete e-commerce website design and development including:\n" +
+          "• Store setup and configuration\n" +
+          "• Theme installation and customization\n" +
+          "• Homepage design\n" +
+          "• Product page setup\n" +
+          "• Category page setup\n" +
+          "• About Us page\n" +
+          "• Contact page\n" +
+          "• WhatsApp integration\n" +
+          "• Mobile responsive design\n" +
+          "• Basic SEO setup\n" +
+          "• Navigation and menu configuration",
+      },
+      {
+        name: "Shopify Store",
+        hsnSac: "998314",
+        description:
+          "Complete Shopify website design and development including:\n" +
+          "• Shopify store setup and configuration\n" +
+          "• Theme installation and customization\n" +
+          "• Homepage design\n" +
+          "• Product page setup\n" +
+          "• Collection page setup\n" +
+          "• About Us page\n" +
+          "• Contact page\n" +
+          "• WhatsApp integration\n" +
+          "• Mobile responsive design\n" +
+          "• Basic SEO setup\n" +
+          "• Navigation and menu configuration",
+      },
+      {
+        name: "Portfolio Website",
+        hsnSac: "998314",
+        description:
+          "Custom portfolio website design and development including:\n" +
+          "• Homepage design\n" +
+          "• About page\n" +
+          "• Portfolio/work showcase section\n" +
+          "• Contact page with enquiry form\n" +
+          "• Mobile responsive design\n" +
+          "• Basic SEO setup",
+      },
+      {
+        name: "Technical Support",
+        hsnSac: "998313",
+        description: "Ongoing technical support and maintenance for an existing website or application, billed as agreed with the client.",
+      },
+      {
+        name: "Meta Ads",
+        hsnSac: "998365",
+        description: "Setup and management of Facebook/Instagram (Meta) ad campaigns, including audience targeting, creative setup, and performance tracking.",
+      },
+      {
+        name: "SEO Optimization",
+        hsnSac: "998313",
+        description: "On-page and technical SEO optimization to improve search engine visibility, including keyword research, metadata, and site structure improvements.",
+      },
+      {
+        name: "Payment Gateway Integration",
+        hsnSac: "998314",
+        description: "Integration of a payment gateway (e.g. Razorpay, PayU, Stripe) into an existing website or store, including testing of live transactions.",
+      },
     ],
     projectStatuses: ["Lead", "In Progress", "Completed", "On Hold", "Cancelled"],
     // Checklist template: category name -> list of default item labels.
@@ -111,6 +179,21 @@ function migrateLegacyFields(settings) {
     const { bankDetails, ...rest } = result;
     const carriedUpi = (result.upiId || (bankDetails && bankDetails.upiId) || "").trim();
     result = { ...rest, upiId: carriedUpi || defaultSettings().upiId };
+    changed = true;
+  }
+
+  // Pre-v2.1.1 settings.json files stored `services` as a plain array
+  // of name strings (no HSN/SAC, no description). Upgrade each string
+  // entry to the current { name, hsnSac, description } object shape,
+  // carrying the name forward and leaving hsnSac/description blank -
+  // that's exactly the same information the old shape had, just in a
+  // form the quotation PDF can also read hsnSac/description from.
+  // Entries that are already objects (current shape) are left as-is.
+  if (Array.isArray(result.services) && result.services.some((s) => typeof s === "string")) {
+    const migratedServices = result.services.map((s) =>
+      typeof s === "string" ? { name: s, hsnSac: "", description: "" } : s
+    );
+    result = { ...result, services: migratedServices };
     changed = true;
   }
 

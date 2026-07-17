@@ -23,6 +23,25 @@ function normalizeTermsLines(terms) {
   return [];
 }
 
+// Renders the HSN/SAC line and the full description block under a
+// quotation item's name, exactly as they're stored: line breaks,
+// bullet points, blank lines and indentation are all preserved
+// verbatim (via white-space: pre-wrap in the shared stylesheet -
+// escapeHtml() only escapes HTML-special characters, it never
+// touches whitespace). Either piece is simply omitted - with no
+// leftover spacing - when the item doesn't have it, since not every
+// service has an HSN/SAC or a description on file.
+function serviceDetailHtml(item) {
+  const hsnSac = (item.hsnSac || "").trim();
+  const description = (item.description || "").trim();
+
+  const hsnHtml = hsnSac ? `<div class="item-hsn">(HSN/SAC: ${escapeHtml(hsnSac)})</div>` : "";
+  const descriptionHtml = description ? `<div class="item-description">${escapeHtml(description)}</div>` : "";
+
+  if (!hsnHtml && !descriptionHtml) return "";
+  return `<div class="item-details">${hsnHtml}${descriptionHtml}</div>`;
+}
+
 function quotationHtml(project, quotation, settings) {
   const items = quotation.items || [];
   const subtotal = items.reduce((sum, item) => sum + Number(item.price) * Number(item.quantity), 0);
@@ -32,7 +51,10 @@ function quotationHtml(project, quotation, settings) {
       (item, i) => `
     <tr>
       <td>${i + 1}</td>
-      <td>${escapeHtml(item.name)}</td>
+      <td>
+        <div class="item-name">${escapeHtml(item.name)}</div>
+        ${serviceDetailHtml(item)}
+      </td>
       <td class="text-right">${item.quantity}</td>
       <td class="text-right">${formatCurrency(item.price)}</td>
       <td class="text-right">${formatCurrency(Number(item.price) * Number(item.quantity))}</td>

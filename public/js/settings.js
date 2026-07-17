@@ -31,7 +31,7 @@ function settingsPage() {
     addServiceName() {
       const name = this.newServiceName.trim();
       if (!name) return;
-      this.settings.services.push(name);
+      this.settings.services.push({ name, hsnSac: "", description: "" });
       this.newServiceName = "";
     },
 
