@@ -3,6 +3,26 @@
 const { wrapDocument, escapeHtml } = require("./layout");
 const { formatCurrency, formatDate } = require("../../formatting");
 
+// quotation.terms has historically been a single newline-separated
+// string (the textarea in the Quotation modal saves it that way), but
+// it may also come in as an array of line strings (e.g. an older/newer
+// client, or a document snapshot edited by hand), or be missing
+// entirely (undefined/null) if no terms were set. Normalize every one
+// of those shapes into a plain array of trimmed, non-empty lines so
+// the PDF renders correctly no matter how the record was stored.
+function normalizeTermsLines(terms) {
+  if (Array.isArray(terms)) {
+    return terms.map((line) => String(line ?? "").trim()).filter(Boolean);
+  }
+  if (typeof terms === "string") {
+    return terms
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
 function quotationHtml(project, quotation, settings) {
   const items = quotation.items || [];
   const subtotal = items.reduce((sum, item) => sum + Number(item.price) * Number(item.quantity), 0);
@@ -20,10 +40,7 @@ function quotationHtml(project, quotation, settings) {
     )
     .join("");
 
-  const termsLines = (quotation.terms || "")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
+  const termsLines = normalizeTermsLines(quotation.terms);
 
   const termsSection =
     termsLines.length > 0

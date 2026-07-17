@@ -67,6 +67,31 @@ function isNotFound(err) {
 // else in this file is built on top of them.
 
 /**
+ * Resolves the base64 content of a file returned by repos.getContent().
+ *
+ * The Contents API only inlines file content when the file is under 1MB.
+ * For anything larger (e.g. a generated invoice/quotation/checklist PDF
+ * with the logo/stamp/QR code embedded as base64 images, which easily
+ * crosses 1MB) it omits `content` entirely and sets `encoding: "none"`.
+ * That "none" is a truthy string, so the old `data.encoding || "base64"`
+ * fallback never kicked in and it was passed straight to Buffer.from()
+ * as the encoding name, which Node doesn't recognize.
+ *
+ * When that happens, fetch the blob directly via the Git Data API
+ * (using the sha we already have from the Contents API response) -
+ * that endpoint always returns base64 content regardless of file size
+ * (up to the Git blob API's own 100MB limit), which is the officially
+ * documented way to read large files from a repo.
+ */
+async function resolveFileBase64(owner, repo, filePath, data) {
+  if (data.encoding === "none") {
+    const { data: blob } = await client().git.getBlob({ owner, repo, file_sha: data.sha });
+    return blob.content;
+  }
+  return data.content;
+}
+
+/**
  * Reads a text file from the data repo.
  * Returns { content, sha } or null if the file doesn't exist.
  */
@@ -77,7 +102,8 @@ async function readFile(filePath) {
     if (Array.isArray(data) || data.type !== "file") {
       throw new Error(`${filePath} is not a file`);
     }
-    const content = Buffer.from(data.content, data.encoding || "base64").toString("utf-8");
+    const base64 = await resolveFileBase64(owner, repo, filePath, data);
+    const content = Buffer.from(base64, "base64").toString("utf-8");
     return { content, sha: data.sha };
   } catch (err) {
     if (isNotFound(err)) return null;
@@ -95,7 +121,8 @@ async function readFileBuffer(filePath) {
     if (Array.isArray(data) || data.type !== "file") {
       throw new Error(`${filePath} is not a file`);
     }
-    return { buffer: Buffer.from(data.content, data.encoding || "base64"), sha: data.sha };
+    const base64 = await resolveFileBase64(owner, repo, filePath, data);
+    return { buffer: Buffer.from(base64, "base64"), sha: data.sha };
   } catch (err) {
     if (isNotFound(err)) return null;
     throw err;
