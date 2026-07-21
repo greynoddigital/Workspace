@@ -13,6 +13,7 @@ function projectDetailPage() {
     tab: "overview",
     statuses: ["Lead", "In Progress", "Completed", "On Hold", "Cancelled"],
     serviceOptions: [],
+    workReferenceOptions: [],
     formError: "",
 
     async load() {
@@ -23,6 +24,7 @@ function projectDetailPage() {
         if (settings.services) this.serviceOptions = settings.services;
         this.checklistTemplate = settings.checklistTemplate || {};
         this.defaultQuotationTerms = settings.defaultQuotationTerms || "";
+        this.workReferenceOptions = settings.workReferences || [];
 
         this.project = await api.get("/api/projects/" + this.projectId);
         this.editForm = { ...this.project };
@@ -169,6 +171,24 @@ function projectDetailPage() {
       await api.put("/api/projects/" + this.projectId + "/" + kind + "/" + doc.id, { driveLink: doc.driveLink });
     },
 
+    // Saves a manually-edited Quotation/Checklist/Invoice number. This
+    // is purely a label change on the document - it never affects the
+    // internal auto-numbering counter, so the *next* document created
+    // still gets the next sequential number regardless of what this
+    // one was renamed to. Every PDF generated afterwards uses this
+    // saved value instead of regenerating a number.
+    async saveDocNumber(kind, doc) {
+      try {
+        const updated = await api.put("/api/projects/" + this.projectId + "/" + kind + "/" + doc.id, {
+          number: doc.number,
+        });
+        doc.number = updated.number; // reflect server-side trimming, etc.
+      } catch (err) {
+        alert(err.message); // e.g. "Document number cannot be empty."
+        await this.loadDocuments(); // revert the input to the last saved value
+      }
+    },
+
     async deleteDoc(kind, docId) {
       if (!confirm("Delete this document record?")) return;
       await api.del("/api/projects/" + this.projectId + "/" + kind + "/" + docId);
@@ -176,9 +196,38 @@ function projectDetailPage() {
       if (kind === "invoices") this.project = await api.get("/api/projects/" + this.projectId);
     },
 
+    // Editing which Work References are attached to an *existing*
+    // quotation. Re-checks a box and saving re-snapshots that
+    // reference's current Settings data onto the quotation (see
+    // routes/quotations.js); references left unchecked/untouched keep
+    // whatever snapshot they already had.
+    showReferencesModal: false,
+    referencesModalQuotation: null,
+    referencesModalSelectedIds: [],
+
+    openReferencesModal(quotation) {
+      this.docError = "";
+      this.referencesModalQuotation = quotation;
+      this.referencesModalSelectedIds = (quotation.workReferenceIds || []).slice();
+      this.showReferencesModal = true;
+    },
+
+    async saveReferencesModal() {
+      try {
+        const updated = await api.put(
+          "/api/projects/" + this.projectId + "/quotations/" + this.referencesModalQuotation.id,
+          { workReferenceIds: this.referencesModalSelectedIds }
+        );
+        Object.assign(this.referencesModalQuotation, updated);
+        this.showReferencesModal = false;
+      } catch (err) {
+        alert(err.message);
+      }
+    },
+
     // Quotation modal
     showQuotationModal: false,
-    quotationForm: { date: "", items: [], terms: "" },
+    quotationForm: { date: "", items: [], terms: "", workReferenceIds: [] },
     defaultQuotationTerms: "",
 
     openQuotationModal() {
@@ -193,6 +242,7 @@ function projectDetailPage() {
           description: s.description || "",
         })),
         terms: this.defaultQuotationTerms,
+        workReferenceIds: [],
       };
       if (this.quotationForm.items.length === 0) {
         this.quotationForm.items.push({ name: "", price: 0, quantity: 1, hsnSac: "", description: "" });
@@ -220,6 +270,7 @@ function projectDetailPage() {
           date: this.quotationForm.date,
           items: this.quotationForm.items,
           terms: this.quotationForm.terms,
+          workReferenceIds: this.quotationForm.workReferenceIds,
         });
         this.showQuotationModal = false;
         await this.loadDocuments();

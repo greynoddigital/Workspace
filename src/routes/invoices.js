@@ -10,6 +10,7 @@ const projectStore = require("../lib/projectStore");
 const settingsStore = require("../lib/settingsStore");
 const githubStorage = require("../lib/githubStorage");
 const { nextDocumentNumber } = require("../lib/documentNumbering");
+const { validateDocumentNumber } = require("../validators/documentNumberValidator");
 const { uid } = require("../lib/uid");
 const { determineInvoiceType } = require("../lib/invoiceLogic");
 const { projectValue, totalPaid } = require("../lib/calculations");
@@ -94,6 +95,15 @@ router.put("/:id", async (req, res, next) => {
     const documents = await projectStore.readDocuments(project.id);
     const index = documents.invoices.findIndex((inv) => inv.id === req.params.id);
     if (index === -1) return res.status(404).json({ errors: ["Invoice not found."] });
+
+    // See the equivalent note in routes/quotations.js: "number" is
+    // user-editable but must stay non-empty, and editing it never
+    // touches the independent auto-numbering counter.
+    if (req.body.number !== undefined) {
+      const numberErrors = validateDocumentNumber(req.body.number);
+      if (numberErrors.length > 0) return res.status(400).json({ errors: numberErrors });
+      req.body.number = req.body.number.trim();
+    }
 
     documents.invoices[index] = { ...documents.invoices[index], ...req.body, id: req.params.id };
     await projectStore.writeDocuments(project.id, documents);

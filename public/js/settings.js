@@ -13,6 +13,8 @@ function settingsPage() {
     newCategoryName: "",
     newStatusName: "",
     newChecklistItem: {},
+    newWorkReference: { projectName: "", websiteUrl: "", description: "" },
+    workReferenceError: "",
 
     async load() {
       this.loading = true;
@@ -40,6 +42,29 @@ function settingsPage() {
       if (!status) return;
       this.settings.projectStatuses.push(status);
       this.newStatusName = "";
+    },
+
+    addWorkReference() {
+      this.workReferenceError = "";
+      const projectName = this.newWorkReference.projectName.trim();
+      const websiteUrl = this.newWorkReference.websiteUrl.trim();
+      if (!projectName || !websiteUrl) {
+        this.workReferenceError = "Project Name and Website URL are required.";
+        return;
+      }
+      this.settings.workReferences.push({
+        id: crypto.randomUUID(),
+        projectName,
+        websiteUrl,
+        description: this.newWorkReference.description.trim(),
+        displayOrder: null,
+      });
+      this.newWorkReference = { projectName: "", websiteUrl: "", description: "" };
+    },
+
+    removeWorkReference(idx) {
+      if (!confirm("Remove this work reference? It will no longer be selectable on new quotations.")) return;
+      this.settings.workReferences.splice(idx, 1);
     },
 
     addCategory() {

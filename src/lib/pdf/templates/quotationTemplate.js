@@ -42,6 +42,57 @@ function serviceDetailHtml(item) {
   return `<div class="item-details">${hsnHtml}${descriptionHtml}</div>`;
 }
 
+// Reference website URLs are typed freehand in Settings (e.g. someone
+// may type "essalgroup.ae" without "https://"). A bare domain like
+// that would render as a broken relative link, so we prefix a scheme
+// for the href while still displaying the text exactly as saved.
+function workReferenceLink(url) {
+  const trimmed = String(url || "").trim();
+  if (!trimmed) return "";
+  const href = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  return `<a href="${escapeHtml(href)}">${escapeHtml(trimmed)}</a>`;
+}
+
+// Builds the "Our Previous Work" section from the quotation's saved
+// Work References snapshot (quotation.workReferences - see
+// src/lib/workReferenceSnapshot.js). Entirely omitted when there's no
+// snapshot or it's empty, e.g. every quotation generated before this
+// feature existed, or one where no references were selected -
+// nothing in the layout changes for those. Only quotationTemplate.js
+// renders this; invoice and checklist PDFs are untouched.
+//
+// The <style> block is scoped to this section (wr- prefixed classes,
+// only ever emitted here) rather than added to the shared stylesheet
+// in layout.js, so it can never affect Invoice/Checklist PDFs even
+// indirectly.
+function workReferencesHtml(workReferences) {
+  const refs = Array.isArray(workReferences) ? workReferences : [];
+  if (refs.length === 0) return "";
+
+  const items = refs
+    .map(
+      (ref) => `
+    <div class="wr-item">
+      <div class="wr-name">${escapeHtml(ref.projectName)}</div>
+      ${ref.websiteUrl ? `<div class="wr-url">${workReferenceLink(ref.websiteUrl)}</div>` : ""}
+      ${ref.description ? `<div class="wr-description">${escapeHtml(ref.description)}</div>` : ""}
+    </div>`
+    )
+    .join("");
+
+  return `
+    <style>
+      .wr-item { border-top: 1px solid #ccc; padding: 10px 0; }
+      .wr-item:last-child { padding-bottom: 0; }
+      .wr-name { font-weight: bold; font-size: 12px; }
+      .wr-url { font-size: 11px; margin-top: 2px; }
+      .wr-description { font-size: 10.5px; color: #333; margin-top: 3px; white-space: pre-wrap; line-height: 1.5; }
+    </style>
+    <h2 class="section-title">Our Previous Work</h2>
+    <div class="wr-list">${items}</div>
+  `;
+}
+
 function quotationHtml(project, quotation, settings) {
   const items = quotation.items || [];
   const subtotal = items.reduce((sum, item) => sum + Number(item.price) * Number(item.quantity), 0);
@@ -95,6 +146,8 @@ function quotationHtml(project, quotation, settings) {
     </table>
 
     ${termsSection}
+
+    ${workReferencesHtml(quotation.workReferences)}
   `;
 
   return wrapDocument({

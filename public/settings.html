@@ -41,6 +41,7 @@
             <button :class="{active: tab === 'company'}" @click="tab = 'company'">Company</button>
             <button :class="{active: tab === 'branding'}" @click="tab = 'branding'">Brand Assets</button>
             <button :class="{active: tab === 'services'}" @click="tab = 'services'">Services</button>
+            <button :class="{active: tab === 'workReferences'}" @click="tab = 'workReferences'">Work References</button>
             <button :class="{active: tab === 'checklist'}" @click="tab = 'checklist'">Checklist Template</button>
             <button :class="{active: tab === 'application'}" @click="tab = 'application'">Application</button>
           </div>
@@ -112,6 +113,43 @@
                 <input type="text" placeholder="New service name" x-model="newServiceName" style="max-width:300px;" />
                 <button @click="addServiceName()">+ Add</button>
               </div>
+              <button class="primary" @click="save()">Save</button>
+            </div>
+          </template>
+
+          <!-- Work References -->
+          <template x-if="tab === 'workReferences'">
+            <div class="panel">
+              <div class="panel-title">Work References</div>
+              <p class="muted" style="font-size:12px;">Portfolio of completed projects you can selectively attach to a Quotation's "Our Previous Work" section. Editing one here only changes future quotations - quotations already generated keep the reference data as it was when they were created.</p>
+              <table>
+                <thead><tr><th style="width:200px;">Project Name</th><th style="width:200px;">Website URL</th><th>Short Description</th><th style="width:90px;">Order</th><th style="width:80px;"></th></tr></thead>
+                <tbody>
+                  <template x-for="(ref, idx) in settings.workReferences" :key="ref.id">
+                    <tr>
+                      <td><input type="text" x-model="ref.projectName" /></td>
+                      <td><input type="text" x-model="ref.websiteUrl" placeholder="https://example.com" /></td>
+                      <td><textarea x-model="ref.description" style="min-height:50px; width:100%;"></textarea></td>
+                      <td><input type="number" x-model="ref.displayOrder" /></td>
+                      <td><button class="small danger" @click="removeWorkReference(idx)">Remove</button></td>
+                    </tr>
+                  </template>
+                  <template x-if="settings.workReferences.length === 0">
+                    <tr><td colspan="5" class="empty-state">No work references yet.</td></tr>
+                  </template>
+                </tbody>
+              </table>
+
+              <div class="divider"></div>
+              <div class="field-row">
+                <div class="field"><label>Project Name</label><input type="text" x-model="newWorkReference.projectName" /></div>
+                <div class="field"><label>Website URL</label><input type="text" x-model="newWorkReference.websiteUrl" placeholder="https://example.com" /></div>
+              </div>
+              <div class="field"><label>Short Description (optional)</label><textarea x-model="newWorkReference.description" style="min-height:60px;"></textarea></div>
+              <button @click="addWorkReference()">+ Add Work Reference</button>
+              <template x-if="workReferenceError"><div class="error-box" x-text="workReferenceError"></div></template>
+
+              <div class="divider"></div>
               <button class="primary" @click="save()">Save</button>
             </div>
           </template>

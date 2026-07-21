@@ -10,6 +10,8 @@ const projectStore = require("../lib/projectStore");
 const settingsStore = require("../lib/settingsStore");
 const githubStorage = require("../lib/githubStorage");
 const { nextDocumentNumber } = require("../lib/documentNumbering");
+const { validateDocumentNumber } = require("../validators/documentNumberValidator");
+const { buildWorkReferenceSnapshot } = require("../lib/workReferenceSnapshot");
 const { uid } = require("../lib/uid");
 const { quotationHtml } = require("../lib/pdf/templates/quotationTemplate");
 const { htmlToPdfBuffer } = require("../lib/pdf/pdfGenerator");
@@ -37,6 +39,15 @@ router.post("/", async (req, res, next) => {
 
     const settings = await settingsStore.readSettings();
 
+    // Work References: the client sends the ids the user checked; we
+    // snapshot each one's current Settings data (name/URL/description)
+    // onto the quotation right now, so this quotation keeps showing
+    // that exact text even if the reference is edited/removed later.
+    const { workReferenceIds, workReferences } = buildWorkReferenceSnapshot(
+      req.body.workReferenceIds,
+      settings.workReferences
+    );
+
     const quotation = {
       id: uid(),
       number: await nextDocumentNumber("quotation"),
@@ -45,6 +56,8 @@ router.post("/", async (req, res, next) => {
       projectName: req.body.projectName || project.projectName,
       items,
       terms: req.body.terms !== undefined ? req.body.terms : settings.defaultQuotationTerms,
+      workReferenceIds,
+      workReferences,
       driveLink: "",
       createdAt: new Date().toISOString(),
     };
@@ -72,6 +85,32 @@ router.put("/:id", async (req, res, next) => {
     const documents = await projectStore.readDocuments(project.id);
     const index = documents.quotations.findIndex((q) => q.id === req.params.id);
     if (index === -1) return res.status(404).json({ errors: ["Quotation not found."] });
+
+    // The "number" field is user-editable (see documentNumbering.js),
+    // but it must never be blanked out - the PDF filename and the
+    // printed document both depend on it. The auto-numbering counter
+    // itself is untouched by this edit; it lives in GitHub's
+    // counters.json and only advances when a new quotation is created.
+    if (req.body.number !== undefined) {
+      const numberErrors = validateDocumentNumber(req.body.number);
+      if (numberErrors.length > 0) return res.status(400).json({ errors: numberErrors });
+      req.body.number = req.body.number.trim();
+    }
+
+    // Re-selecting Work References re-snapshots from *current*
+    // Settings data (the user just picked these checkboxes now, so
+    // "now" is when the snapshot should be taken). Leaving
+    // workReferenceIds out of the request body entirely leaves the
+    // quotation's existing selection/snapshot untouched.
+    if (req.body.workReferenceIds !== undefined) {
+      const settings = await settingsStore.readSettings();
+      const { workReferenceIds, workReferences } = buildWorkReferenceSnapshot(
+        req.body.workReferenceIds,
+        settings.workReferences
+      );
+      req.body.workReferenceIds = workReferenceIds;
+      req.body.workReferences = workReferences;
+    }
 
     documents.quotations[index] = { ...documents.quotations[index], ...req.body, id: req.params.id };
     await projectStore.writeDocuments(project.id, documents);

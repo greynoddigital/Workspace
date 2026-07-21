@@ -268,6 +268,13 @@ textarea {
   font-family: "SFMono-Regular", "Courier New", Consolas, monospace;
 }
 
+/* Editable document-number field in the Quotations/Checklists/Invoices
+   tables - compact, since these values are short codes like QT-2026-0001. */
+.doc-number-input {
+  width: 140px;
+  min-width: 140px;
+}
+
 label {
   display: block;
   font-size: 11px;

@@ -118,6 +118,11 @@ function defaultSettings() {
         description: "Integration of a payment gateway (e.g. Razorpay, PayU, Stripe) into an existing website or store, including testing of live transactions.",
       },
     ],
+    // Portfolio of completed projects that can be selectively attached
+    // to a Quotation's "Our Previous Work" section. displayOrder is
+    // stored for future sorting/reordering support but isn't currently
+    // used to reorder anything - references show in list order.
+    workReferences: [],
     projectStatuses: ["Lead", "In Progress", "Completed", "On Hold", "Cancelled"],
     // Checklist template: category name -> list of default item labels.
     // Users can add/remove items per project on top of these defaults.

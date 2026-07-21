@@ -228,13 +228,18 @@
                     <tbody>
                       <template x-for="q in documents.quotations" :key="q.id">
                         <tr>
-                          <td x-text="q.number"></td>
+                          <td>
+                            <input type="text" class="doc-number-input" x-model="q.number" @change="saveDocNumber('quotations', q)" />
+                          </td>
                           <td x-text="formatDate(q.date)"></td>
                           <td>
                             <input type="text" placeholder="Paste Drive link after uploading" x-model="q.driveLink" @change="saveDriveLink('quotations', q)" />
                           </td>
                           <td style="white-space:nowrap;">
                             <a class="btn small" :href="'/api/projects/' + project.id + '/quotations/' + q.id + '/pdf'" target="_blank">PDF</a>
+                            <button class="small" @click="openReferencesModal(q)" :title="(q.workReferenceIds || []).length + ' work reference(s) attached'">
+                              References<span x-show="(q.workReferenceIds || []).length" x-cloak> (<span x-text="(q.workReferenceIds || []).length"></span>)</span>
+                            </button>
                             <button class="small danger" @click="deleteDoc('quotations', q.id)">Delete</button>
                           </td>
                         </tr>
@@ -257,7 +262,9 @@
                     <tbody>
                       <template x-for="c in documents.checklists" :key="c.id">
                         <tr>
-                          <td x-text="c.number"></td>
+                          <td>
+                            <input type="text" class="doc-number-input" x-model="c.number" @change="saveDocNumber('checklists', c)" />
+                          </td>
                           <td x-text="formatDate(c.date)"></td>
                           <td>
                             <input type="text" placeholder="Paste Drive link after uploading" x-model="c.driveLink" @change="saveDriveLink('checklists', c)" />
@@ -286,7 +293,9 @@
                     <tbody>
                       <template x-for="inv in documents.invoices" :key="inv.id">
                         <tr>
-                          <td x-text="inv.number"></td>
+                          <td>
+                            <input type="text" class="doc-number-input" x-model="inv.number" @change="saveDocNumber('invoices', inv)" />
+                          </td>
                           <td x-text="formatDate(inv.date)"></td>
                           <td x-text="inv.type"></td>
                           <td class="text-right" x-text="formatCurrency(inv.amount)"></td>
@@ -344,9 +353,40 @@
             <textarea style="min-height: 160px;" x-model="quotationForm.terms"></textarea>
           </div>
 
+          <div class="field" style="margin-top: 16px;">
+            <label>Work References</label>
+            <p class="muted" style="font-size:12px; margin: 0 0 8px 0;">Selected references appear in an "Our Previous Work" section on the PDF.</p>
+            <template x-for="ref in workReferenceOptions" :key="ref.id">
+              <label class="checklist-item" style="text-transform:none; letter-spacing:0;">
+                <input type="checkbox" :value="ref.id" x-model="quotationForm.workReferenceIds" />
+                <span x-text="ref.projectName + ' — ' + ref.websiteUrl"></span>
+              </label>
+            </template>
+            <p class="muted" style="font-size:12px;" x-show="workReferenceOptions.length === 0" x-cloak>No work references yet — add some in Settings.</p>
+          </div>
+
           <div class="actions-row">
             <button class="primary" @click="createQuotation()">Generate Quotation</button>
             <button @click="showQuotationModal = false">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── EDIT QUOTATION WORK REFERENCES MODAL ─────────────────────── -->
+      <div class="modal-overlay" x-show="showReferencesModal" x-cloak @click.self="showReferencesModal = false">
+        <div class="modal">
+          <div class="modal-title">Work References <span class="muted" x-text="referencesModalQuotation ? '— ' + referencesModalQuotation.number : ''"></span></div>
+          <p class="muted" style="font-size:12px;">Choose which references appear in this quotation's "Our Previous Work" section. Saving refreshes the selected references with their current Settings data.</p>
+          <template x-for="ref in workReferenceOptions" :key="ref.id">
+            <label class="checklist-item" style="text-transform:none; letter-spacing:0;">
+              <input type="checkbox" :value="ref.id" x-model="referencesModalSelectedIds" />
+              <span x-text="ref.projectName + ' — ' + ref.websiteUrl"></span>
+            </label>
+          </template>
+          <p class="muted" style="font-size:12px;" x-show="workReferenceOptions.length === 0" x-cloak>No work references yet — add some in Settings.</p>
+          <div class="actions-row">
+            <button class="primary" @click="saveReferencesModal()">Save</button>
+            <button @click="showReferencesModal = false">Cancel</button>
           </div>
         </div>
       </div>
